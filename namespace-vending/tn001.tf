@@ -44,7 +44,6 @@ module "tn001_runner" {
   tenant         = module.tn001_namespace.namespace
   bound_audience = var.bound_audience
 
-  vault_address   = var.vault_address
   vault_auth_path = var.vault_auth_path
   vault_auth_role = var.vault_auth_role
   vault_namespace = module.tn001_namespace.namespace
