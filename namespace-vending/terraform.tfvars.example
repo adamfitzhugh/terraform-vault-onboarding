@@ -1,0 +1,14 @@
+# Example terraform.tfvars for namespace-vending.
+# Copy to terraform.tfvars and fill in.
+
+github_organization = "example-org"
+github_repository   = "terraform-vault-onboarding"
+
+# The audience the workflow requests when minting its OIDC token, and which the
+# Vault role requires. Must match the workflow exactly. Deliberately has no
+# default: an unset bound_audiences disables audience validation entirely.
+bound_audience = "vault.internal"
+
+vault_auth_path = "gha"
+
+# VAULT_ADDR / VAULT_TOKEN come from the environment - see .env.example.
