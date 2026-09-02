@@ -64,51 +64,37 @@ variable "token_type" {
 #   default     = "tfc-admin"
 # }
 
-variable "okta_org_name" {
+variable "aws_region" {
   type        = string
-  description = "Okta organization name"
+  description = "AWS region hosting the Cognito user pool."
 }
 
-variable "okta_base_url" {
+variable "cognito_user_pool_id" {
   type        = string
-  description = "Okta base URL"
-  default     = "okta.com"
+  description = "Cognito user pool ID. Used to derive the OIDC issuer."
 }
 
-variable "okta_auth_path" {
-  type    = string
-  default = "oidc"
+variable "cognito_client_id" {
+  type        = string
+  description = "Cognito app client ID. Also the expected `aud` claim - the app client must be configured to match."
 }
 
-# variable "okta_users" {
-#   type = map(object({
-#     first_name = string
-#     last_name  = string
-#     password   = string
-#     groups     = list(string)
-#   }))
-#   default = {}
-# }
+variable "oidc_auth_path" {
+  type        = string
+  description = "Mount path for the OIDC auth backend."
+  default     = "oidc"
+}
 
-# variable "okta_api_token" {
-#   type        = string
-#   description = "Okta API token"
-# }
+variable "vault_address" {
+  type        = string
+  description = "Vault API endpoint. Used to construct allowed_redirect_uris, which the Cognito app client must also allow as callback URLs."
+}
 
-variable "okta_mgmt_groups" {
-  type = list(string)
+variable "mgmt_groups" {
+  type        = list(string)
+  description = "Cognito group names granted management access. These must exist in the pool with exactly these names: a mismatch is not detectable at plan time."
   default = [
     "vault-admin",
     "vault-user"
   ]
 }
-
-# variable "okta_namespace_groups" {
-#   type    = list(string)
-#   default = []
-# }
-
-# variable "enable_tfc_agent_pool" {
-#   type    = bool
-#   default = false
-# }

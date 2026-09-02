@@ -40,7 +40,7 @@ jobs:
 
       - name: Terraform Operations
         run: |
-          for dir in bootstrap namespace-*; do
+          for dir in namespace-*; do
             if [ -d "$dir" ]; then
               echo "---------------------------------------------------------"
               echo "Processing directory: $dir"

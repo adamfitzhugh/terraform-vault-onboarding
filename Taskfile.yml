@@ -6,7 +6,7 @@ dotenv: ['.env']
 
 vars:
   TF_DIRS:
-    sh: ls -d bootstrap namespace-* modules/*/ 2>/dev/null | xargs
+    sh: ls -d namespace-* modules/*/ 2>/dev/null | xargs
 
 tasks:
   lint:
@@ -39,46 +39,6 @@ tasks:
           echo "--> Validating: {{.ITEM}}"
           terraform -chdir={{.ITEM}} validate
 
-  bootstrap:apply:
-    desc: Apply bootstrap infrastructure
-    dir: ./bootstrap
-    preconditions:
-      - &tfvars_precondition
-        sh: test -f terraform.tfvars
-        msg: "terraform.tfvars not found. Copy terraform.tfvars.example to terraform.tfvars."
-    cmds:
-      - terraform init
-      - terraform apply -auto-approve
-      - task: update-env
-
-  bootstrap:destroy:
-    desc: Destroy bootstrap infrastructure
-    dir: ./bootstrap
-    cmds:
-      - terraform destroy
-
-  bootstrap:destroy-vault:
-    desc: Destroy only HCP Vault cluster resources (HVN, cluster, admin token)
-    dir: ./bootstrap
-    cmds:
-      - terraform init
-      - terraform destroy -target=hcp_vault_cluster.vault
-
-  bootstrap:plan:
-    desc: Plan bootstrap infrastructure changes
-    dir: ./bootstrap
-    preconditions:
-      - *tfvars_precondition
-    cmds:
-      - terraform init
-      - terraform plan
-
-  bootstrap:refresh:
-    desc: Refresh bootstrap state
-    dir: ./bootstrap
-    cmds:
-      - terraform plan -refresh-only
-
   debug:
     desc: Debug variable evaluation
     cmds:
@@ -97,26 +57,17 @@ tasks:
 
   vault:vars:
     aliases: [vars]
-    desc: export vault environment variables (eval this output)
-    vars:
-      VAULT_ADDR:
-        sh: terraform -chdir=bootstrap output -raw hcp_public_endpoint 2>/dev/null || echo ""
-      VAULT_TOKEN:
-        sh: terraform -chdir=bootstrap output -raw hcp_admin_token 2>/dev/null || echo ""
-      VAULT_NAMESPACE:
-        sh: terraform -chdir=bootstrap output -raw namespace 2>/dev/null || echo "admin"
+    desc: Show the Vault environment variables currently in effect
     cmds:
       - |
-        if [ -z "{{.VAULT_ADDR}}" ] || [ -z "{{.VAULT_TOKEN}}" ]; then
-          echo "Error: Vault configuration not found. Run 'task bootstrap:apply' first." >&2
+        if [ -z "${VAULT_ADDR:-}" ] || [ -z "${VAULT_TOKEN:-}" ]; then
+          echo "Error: VAULT_ADDR and VAULT_TOKEN are not set." >&2
+          echo "Copy .env.example to .env and fill it in, or export them directly." >&2
           exit 1
         fi
-        echo "export VAULT_ADDR='{{.VAULT_ADDR}}'"
-        echo "export VAULT_TOKEN='{{.VAULT_TOKEN}}'"
-        echo "export VAULT_NAMESPACE='{{.VAULT_NAMESPACE}}'"
-        echo ""
-        echo "# Run the following to set environment variables:"
-        echo "# eval \"\$(task vault:vars)\""
+        echo "VAULT_ADDR=$VAULT_ADDR"
+        echo "VAULT_NAMESPACE=${VAULT_NAMESPACE:-admin}"
+        echo "VAULT_TOKEN=<set>"
     silent: true
 
   vault:status:
@@ -130,9 +81,3 @@ tasks:
     cmds:
       - echo -n $VAULT_TOKEN | pbcopy
       - open $VAULT_ADDR
-
-  update-env:
-    desc: Update .env file from Terraform outputs
-    cmds:
-      - ./scripts/update_env.sh
-    silent: true

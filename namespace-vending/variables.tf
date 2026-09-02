@@ -1,19 +1,3 @@
-variable "okta_api_token" {
-  type        = string
-  description = "Okta API token"
-}
-
-variable "okta_org_name" {
-  type        = string
-  description = "Okta organization name"
-}
-
-variable "okta_base_url" {
-  type        = string
-  description = "Okta base URL"
-  default     = "okta.com"
-}
-
 variable "github_organization" {
   type        = string
   description = "Name of the GitHub organization."
@@ -24,31 +8,9 @@ variable "github_repository" {
   description = "Name of the GitHub repository."
 }
 
-variable "tfc_organization" {
+variable "bound_audience" {
   type        = string
-  description = "Name of the TFC organization."
-}
-
-variable "tfc_project" {
-  type        = string
-  description = "Name of the TFC project."
-}
-
-variable "tfc_workspace_prefix" {
-  type        = string
-  description = "Name of the TFC workspace."
-  default     = "terraform-vault-onboarding"
-}
-
-variable "tfc_working_directory_prefix" {
-  type        = string
-  description = "Working directory for the TFC workspace."
-  default     = "."
-}
-
-variable "vault_address" {
-  type        = string
-  description = "Vault API endpoint"
+  description = "Audience the GitHub Actions OIDC token must carry, and which the Vault JWT role requires. Must match the audience requested by the workflow."
 }
 
 variable "vault_auth_path" {
@@ -60,15 +22,4 @@ variable "vault_auth_role" {
   type        = string
   description = "Vault role name"
   default     = "tfc-namespace-admin"
-}
-
-variable "vault_namespace" {
-  type        = string
-  description = "The parent Vault namespace"
-  default     = "admin"
-}
-
-variable "enable_tfc_agent_pool" {
-  type    = bool
-  default = false
 }

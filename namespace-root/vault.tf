@@ -1,43 +1,29 @@
-# resource "vault_policy" "tfc_admin" {
-#   name = "tfc-admin"
-#   #  policy = data.vault_policy_document.tfc_admin.hcl
-#   policy = file("${path.module}/../templates/tfc_admin_policy.hcl")
-# }
-
-data "okta_auth_server" "default" {
-  name = "vault"
-}
-
-data "okta_app_oauth" "default" {
-  label = "HashiCorp Vault OIDC"
-}
-
-data "okta_group" "mgmt" {
-  for_each = toset(var.okta_mgmt_groups)
-  name     = each.value
+data "aws_cognito_user_pool_client" "vault" {
+  user_pool_id = var.cognito_user_pool_id
+  client_id    = var.cognito_client_id
 }
 
 resource "vault_identity_group" "vault_user" {
-  name              = "${data.okta_group.mgmt["vault-user"].name}-external"
+  name              = "${local.mgmt_groups["vault-user"]}-external"
   type              = "external"
   external_policies = true
 }
 
 resource "vault_identity_group_alias" "vault_user" {
-  name           = data.okta_group.mgmt["vault-user"].name
-  mount_accessor = vault_jwt_auth_backend.okta.accessor
+  name           = local.mgmt_groups["vault-user"]
+  mount_accessor = vault_jwt_auth_backend.oidc.accessor
   canonical_id   = vault_identity_group.vault_user.id
 }
 
 resource "vault_identity_group" "vault_admin" {
-  name              = "${data.okta_group.mgmt["vault-admin"].name}-external"
+  name              = "${local.mgmt_groups["vault-admin"]}-external"
   type              = "external"
   external_policies = true
 }
 
 resource "vault_identity_group_alias" "vault_admin" {
-  name           = data.okta_group.mgmt["vault-admin"].name
-  mount_accessor = vault_jwt_auth_backend.okta.accessor
+  name           = local.mgmt_groups["vault-admin"]
+  mount_accessor = vault_jwt_auth_backend.oidc.accessor
   canonical_id   = vault_identity_group.vault_admin.id
 }
 
@@ -50,16 +36,17 @@ resource "vault_identity_group_policies" "vault_admin" {
   ]
 }
 
-resource "vault_jwt_auth_backend" "okta" {
-  description        = "Okta OIDC Auth Method"
-  path               = var.okta_auth_path
+resource "vault_jwt_auth_backend" "oidc" {
+  description        = "Cognito OIDC Auth Method"
+  path               = var.oidc_auth_path
   type               = "oidc"
-  default_role       = "okta-group"
-  bound_issuer       = data.okta_auth_server.default.issuer
+  default_role       = "cognito-group"
   namespace_in_state = true
-  oidc_discovery_url = data.okta_auth_server.default.issuer
-  oidc_client_id     = data.okta_app_oauth.default.client_id
-  oidc_client_secret = data.okta_app_oauth.default.client_secret
+
+  bound_issuer       = local.cognito_issuer
+  oidc_discovery_url = local.cognito_issuer
+  oidc_client_id     = data.aws_cognito_user_pool_client.vault.id
+  oidc_client_secret = data.aws_cognito_user_pool_client.vault.client_secret
 
   tune {
     default_lease_ttl  = var.default_lease_ttl
@@ -69,27 +56,35 @@ resource "vault_jwt_auth_backend" "okta" {
   }
 }
 
-resource "vault_jwt_auth_backend_role" "okta_group" {
-  backend               = vault_jwt_auth_backend.okta.path
-  role_type             = vault_jwt_auth_backend.okta.type
-  role_name             = "okta-group"
-  bound_audiences       = local.okta_audiences
-  bound_claims_type     = "glob"
-  allowed_redirect_uris = data.okta_app_oauth.default.redirect_uris
-  user_claim            = "email"
-  oidc_scopes           = ["profile", "groups", "email"]
-  groups_claim          = "groups"
-  token_policies        = ["default"]
+resource "vault_jwt_auth_backend_role" "cognito_group" {
+  backend   = vault_jwt_auth_backend.oidc.path
+  role_type = vault_jwt_auth_backend.oidc.type
+  role_name = "cognito-group"
 
-  claim_mappings = {
-    email       = "email"
-    name        = "name"
-    given_name  = "first_name"
-    middle_name = "middle_name"
-    family_name = "last_name"
-    okta_app_id = "aud"
-    issuer      = "iss"
-  }
+  bound_audiences = [data.aws_cognito_user_pool_client.vault.id]
+  user_claim      = "email"
+  token_policies  = ["default"]
+
+  # Cognito's claim name is literally colon-prefixed. It is a top-level claim,
+  # so the plain string works - Vault's /nested/pointer syntax is not needed.
+  groups_claim = "cognito:groups"
+
+  # The Okta role requested a "groups" scope. Cognito defines no such scope and
+  # requesting an undefined one fails the authorize call; cognito:groups is
+  # emitted without being asked for. This must change, not merely shrink.
+  oidc_scopes = ["profile", "email"]
+
+  # Vault expects these; the Cognito app client must independently allow the
+  # same URLs as callback URLs. Nothing enforces the agreement - a mismatch is
+  # rejected at Cognito, before Vault is involved.
+  allowed_redirect_uris = [
+    "${var.vault_address}/ui/vault/auth/${var.oidc_auth_path}/oidc/callback",
+    "http://localhost:8250/oidc/callback",
+  ]
+
+  # bound_claims_type deliberately omitted. The Okta role carried "glob" with no
+  # bound_claims to apply to - inert, but the same trap disarmed in the machine
+  # plane. Do not reintroduce it without bound_claims that need globbing.
 }
 
 resource "vault_policy" "vault_admin" {
