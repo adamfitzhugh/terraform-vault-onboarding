@@ -1,7 +1,3 @@
-data "aws_cognito_user_pool" "vault" {
-  user_pool_id = var.cognito_user_pool_id
-}
-
 data "aws_cognito_user_pool_client" "vault" {
   user_pool_id = var.cognito_user_pool_id
   client_id    = var.cognito_client_id
