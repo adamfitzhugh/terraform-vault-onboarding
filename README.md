@@ -42,6 +42,7 @@ This project uses a monorepo structure for simplification and ease of demonstrat
 - A Vault Enterprise cluster, already running and reachable (namespaces are an Enterprise feature)
 - An S3 bucket and AWS credentials for Terraform state
 - A GitHub repository with Actions enabled, and permission to create Environments
+- An AWS Cognito user pool and app client, with groups created for Vault access
 - [Task](https://taskfile.dev/) (optional, for automation)
 
 The cluster is **not** provisioned by this repository. There is no bootstrap step:
@@ -139,10 +140,25 @@ claim as a failure — so it fails closed.
 
 `event_name` is bound to `push` because `pull_request` runs also mint valid tokens.
 
-### Okta to Vault (human plane)
+### Cognito to Vault (human plane)
 
-OIDC authentication is configured in the root Vault namespace. Users authenticate via the
-IdP and receive tokens based on their group membership.
+OIDC authentication is configured in the root Vault namespace against an AWS Cognito user
+pool. Users authenticate via Cognito and receive tokens based on their group membership,
+read from the `cognito:groups` claim.
+
+Note that Cognito emits **every** group the user belongs to, unfiltered — it has no
+declarative equivalent of Okta's auth-server claim filtering, which would require a
+pre-token-generation Lambda. Vault ignores group names it holds no alias for, so this is not
+a privilege issue, but group names share a namespace with every other consumer of the pool.
+
+There is also no AWS data source that looks up a Cognito group by name, so a misspelled
+group name is **not** a plan-time error: the user authenticates successfully into no groups
+and holds only the `default` policy. A `check` block enforcing the naming convention stands
+in for the assertion the Okta provider used to give for free.
+
+Known limitation: [hashicorp/vault#26596](https://github.com/hashicorp/vault/issues/26596) —
+Cognito's hosted UI sends `Cross-Origin-Opener-Policy: same-origin`, which breaks OIDC login
+via the Vault **web UI**. CLI login (`vault login -method=oidc`) is unaffected.
 
 ## Adding a New Tenant
 
@@ -180,7 +196,8 @@ The project uses `pre-commit` and `tflint` for code quality.
 
 - [Vault Provider Documentation](https://registry.terraform.io/providers/hashicorp/vault/latest/docs)
 - [GitHub Provider Documentation](https://registry.terraform.io/providers/integrations/github/latest/docs)
-- [Okta Provider Documentation](https://registry.terraform.io/providers/okta/okta/latest/docs)
+- [AWS Provider Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Vault OIDC provider setup — Amazon Cognito](https://developer.hashicorp.com/vault/docs/auth/jwt/oidc-providers/cognito)
 
 ## License
 

@@ -9,3 +9,9 @@ locals {
     ]
   ])
 }
+
+locals {
+  # The naming convention that replaces the deleted Okta existence check.
+  # Group names must exist in Cognito with exactly this spelling.
+  group_name_pattern = "^vault-[a-z0-9-]+$"
+}

@@ -1,0 +1,15 @@
+# Example terraform.tfvars for namespace-root.
+# Copy to terraform.tfvars and fill in.
+
+aws_region           = "eu-west-1"
+cognito_user_pool_id = "eu-west-1_xxxxxxxxx"
+cognito_client_id    = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Used to construct allowed_redirect_uris. The Cognito app client must allow
+# the same URLs as callback URLs - nothing enforces the agreement, and a
+# mismatch is rejected at Cognito before Vault is involved.
+vault_address = "https://vault.example.com:8200"
+
+# These must exist in the Cognito pool with exactly these names. There is no
+# AWS data source to verify that at plan time; see the check block in main.tf.
+mgmt_groups = ["vault-admin", "vault-user"]

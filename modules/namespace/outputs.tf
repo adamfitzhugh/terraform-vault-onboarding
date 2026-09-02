@@ -3,5 +3,5 @@ output "namespace" {
 }
 
 output "rbac_delegation" {
-  value = data.okta_group.rbac
+  value = var.rbac_delegation
 }

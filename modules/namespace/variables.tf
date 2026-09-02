@@ -32,9 +32,10 @@ variable "quota_rate_limit" {
   default = 100
 }
 
-variable "okta_auth_path" {
-  type    = string
-  default = "oidc"
+variable "oidc_auth_path" {
+  type        = string
+  description = "Mount path of the OIDC auth backend in the parent namespace, whose accessor the external group aliases reference."
+  default     = "oidc"
 }
 
 variable "rbac_delegation" {
