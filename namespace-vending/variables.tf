@@ -23,15 +23,3 @@ variable "vault_auth_role" {
   description = "Vault role name"
   default     = "tfc-namespace-admin"
 }
-
-variable "vault_namespace" {
-  type        = string
-  description = "The parent Vault namespace"
-  default     = "admin"
-}
-
-variable "vault_address" {
-  type        = string
-  description = "Vault API endpoint"
-  default     = "https://vault.example.com"
-}
